@@ -1,10 +1,14 @@
 'use client'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useDispatch } from 'react-redux'
+import { loginUser } from '@/redux/features/authSlice'
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({ email: '', password: '' })
   const router = useRouter()
+  const dispatch = useDispatch()
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -13,19 +17,13 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-    })
-
-    if (res.ok) {
-      const resData = await res.json()
-      localStorage.setItem('username', resData.user.username)
+    try {
+      const result = await dispatch(loginUser(formData)).unwrap()
+      localStorage.setItem('username', result.user.username)
+      localStorage.setItem('role', JSON.stringify(result.user.role))
       router.push('/alltask')
-    } else {
-      const data = await res.json()
-      alert(data.message || 'Login failed')
+    } catch (err) {
+      alert(err.message || 'Login failed')
     }
   }
 
@@ -33,7 +31,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex justify-center items-center bg-gray-900 text-white">
       <form onSubmit={handleSubmit} className="p-8 bg-gray-800 rounded shadow-md space-y-4 w-full max-w-sm">
         <h2 className="text-2xl font-bold text-center">Login</h2>
-        
+
         <input
           name="email"
           type="email"

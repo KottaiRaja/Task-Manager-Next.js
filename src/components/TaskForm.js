@@ -9,12 +9,14 @@ export default function TaskForm() {
 
   const [formData, setFormData] = useState({
     title: '',
-    email: '',
+    assignedTo: '',
     description: '',
     dueDate: '',
     status: 'Pending',
     priority: 'Medium',
   })
+
+  const [users, setUsers] = useState([])
 
   useEffect(() => {
     if (taskId) {
@@ -23,6 +25,12 @@ export default function TaskForm() {
         .then(data => setFormData(data))
     }
   }, [taskId])
+
+  useEffect(() => {
+    fetch(`/api/user-based/list`)
+      .then(res => res.json())
+      .then(data => setUsers(data.users || []))
+  }, [])
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -38,7 +46,7 @@ export default function TaskForm() {
       body: JSON.stringify(formData),
     })
 
-    router.push('/')
+    router.push('/alltask')
   }
 
  return (
@@ -56,15 +64,17 @@ export default function TaskForm() {
           required
         />
 
-        <input
-          type="email"
-          name="email"
-          placeholder="Enter assignee's email"
-          value={formData.email}
+        <select
+          name="assignedTo"
+          value={formData.assignedTo}
           onChange={handleChange}
           className="w-full px-4 py-2 rounded-md bg-gray-800 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          required
-        />
+        >
+          <option value="">Select User</option>
+          {users.map(user => (
+            <option key={user._id} value={user._id}>{user.username} {(user.email)}</option>
+          ))}
+        </select>
 
         <textarea
           name="description"
@@ -109,7 +119,7 @@ export default function TaskForm() {
         <div className="flex justify-between items-center pt-4">
           <button
             type="button"
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/alltask')}
             className="text-sm text-gray-300 hover:underline"
           >
             Cancel

@@ -8,7 +8,7 @@ export const sendResetEmail = async (to, resetLink) => {
       pass: process.env.EMAIL_PASS,
     },
   });
-
+  console.log(resetLink);
   const mailOptions = {
     from: `"Your App Name" <${process.env.EMAIL_USER}>`,
     to,

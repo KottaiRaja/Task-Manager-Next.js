@@ -24,5 +24,5 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/alltask', '/create'],
+  matcher: ['/alltask', '/create', '/edit/:path*', '/user/create', '/user/list'],
 };

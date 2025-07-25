@@ -18,7 +18,11 @@ const TasksSchema = new mongoose.Schema(
       default: 'Medium',
     },
     dueDate: Date,
-    email: String,
+    assignedTo: String,
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
   },
   {
     timestamps: true, // adds createdAt and updatedAt
