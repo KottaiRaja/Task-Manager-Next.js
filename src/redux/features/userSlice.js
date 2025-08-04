@@ -4,13 +4,14 @@ import axios from 'axios'
 
 const initialState = {
   users: [],
+  roleBasedUsers: [],
   currentUser: null,
   loading: false,
   error: null,
 }
 
-export const fetchUsers = createAsyncThunk('users/fetchUsers', async () => {
-  const res = await axios.get('/api/users')
+export const fetchUsers = createAsyncThunk('users/fetchUsers', async (params) => {
+  const res = await axios.get('/api/users?page=' + params.page + '&limit=' + params.limit)
   return res.data
 })
 
@@ -50,25 +51,24 @@ const userSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchUsers.fulfilled, (state, action) => {
-        state.users = action.payload
+        state.users = action.payload.users
       })
       .addCase(fetchUserById.fulfilled, (state, action) => {
         state.currentUser = action.payload
       })
-      .addCase(createUser.fulfilled, (state, action) => {
-        state.users.push(action.payload)
-      })
       .addCase(updateUser.fulfilled, (state, action) => {
-        const index = state.users.findIndex(u => u._id === action.payload._id)
+        
+        const index = state.users.findIndex(user => user._id === action.payload._id)
         if (index !== -1) {
           state.users[index] = action.payload
         }
+        
       })
       .addCase(deleteUser.fulfilled, (state, action) => {
         state.users = state.users.filter(u => u._id !== action.payload)
       })
       .addCase(RoleOfUsers.fulfilled, (state, action) => {
-        state.users = action.payload.users || []
+        state.roleBasedUsers =  Array.isArray(action.payload.users) ? action.payload.users : []
       })
   },
 })

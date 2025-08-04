@@ -32,7 +32,11 @@ export async function PUT(req, { params }) {
 export async function DELETE(request, { params }) {
   await connectMongo();
   try {
-    const id = new mongoose.Types.ObjectId(params.id);
+    let { id } = await params;
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
+    }
+
     const deleted = await Task.deleteOne({ _id: id });
     if (!deleted) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });

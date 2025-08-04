@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 
 export async function POST(req) {
     await connectMongo();
-    const { username, email, password, role, assignedUser } = await req.json();
+    const { username, email, password, role, assignedUser, imageUrl } = await req.json();
 
     // Check if user already exists
     const existing = await User.findOne({ email });
@@ -18,8 +18,11 @@ export async function POST(req) {
     let hashedPassword = '';
     let isAdminCreating = !password;
 
+    let status = 'pending'; // Default status for new users
+
     if (!isAdminCreating) {
         hashedPassword = await bcrypt.hash(password, 10);
+        status = 'active'; // Set status to active if password is provided
     }
 
     const newUser = await User.create({
@@ -28,7 +31,9 @@ export async function POST(req) {
         password: hashedPassword,
         role,
         assignedToManager: false,
-        assignedUser
+        assignedUser,
+        status,
+        imageUrl,
     });
 
     if (assignedUser && assignedUser.length > 0) {

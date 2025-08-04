@@ -9,14 +9,25 @@ export default function TaskList() {
   const dispatch = useDispatch()
   const { tasks, loading, error } = useSelector((state) => state.tasks)
 
+  const [taskList, setTaskList] = useState(tasks)
+
   const [page, setPage] = useState(1)
   const [limit] = useState(15)
   const [total, setTotal] = useState(0)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [refresh, setRefresh] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('')
+  const [priorityFilter, setPriorityFilter] = useState('')
 
-  // Debounce search input
+  const [popup, setPopup] = useState({ show: false, message: '', type: 'success' })
+
+  const showPopup = (message, type = 'success') => {
+    setPopup({ show: true, message, type })
+    setTimeout(() => {
+      setPopup({ show: false, message: '', type: 'success' })
+    }, 3000)
+  }
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search)
@@ -25,27 +36,67 @@ export default function TaskList() {
     return () => clearTimeout(timer)
   }, [search])
 
-  // Fetch tasks from Redux
+  const fetchTaskData = async (customPage = page) => {
+    try {
+
+      const res = await dispatch(fetchTasks({
+        page: customPage,
+        limit,
+        search: debouncedSearch,
+        status: statusFilter,
+        priority: priorityFilter
+      })).unwrap()
+
+      setTotal(res.total)
+      setTaskList(res.tasks || [])
+
+      if (res.tasks.length === 0 && customPage > 1) {
+        setPage(customPage - 1)
+      }
+    } catch {
+      setTotal(0)
+      showPopup('Failed to load tasks', 'error')
+    }
+  }
+
+
   useEffect(() => {
-    dispatch(fetchTasks({ page, limit, search: debouncedSearch }))
-      .unwrap()
-      .then((res) => setTotal(res.total))
-      .catch(() => setTotal(0));
-  }, [page, limit, debouncedSearch, dispatch, refresh]); // ✅ Add `refresh`
+    fetchTaskData()
+  }, [page, limit, debouncedSearch, statusFilter, priorityFilter, dispatch])
 
   const totalPages = Math.ceil(total / limit)
 
   const handleDelete = async (e, id) => {
-    e.preventDefault();
+    e.preventDefault()
     if (confirm('Are you sure you want to delete this task?')) {
-      await dispatch(deleteTask(id));
-      setRefresh((prev) => !prev); // ✅ Toggle to re-trigger useEffect
+      try {
+        await dispatch(deleteTask(id)).unwrap()
+        showPopup('Task deleted successfully', 'success')
+
+        // Fetch again after delete
+        fetchTaskData()
+      } catch {
+        showPopup('Failed to delete task', 'error')
+      }
     }
-  };
+  }
+
+  const [role, setRole] = useState(null)
+  useEffect(() => {
+    const userRole = JSON.parse(localStorage.getItem('role'))
+    if (userRole) setRole(userRole)
+  }, [])
 
   return (
     <div>
-      {/* Search Bar */}
+      {popup.show && (
+        <div
+          className={`fixed top-1/4 left-1/2 z-50 px-4 py-2 rounded shadow-md text-white ${popup.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}
+        >
+          {popup.message}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
         <h2 className="text-3xl font-bold text-white">All Tasks</h2>
         <input
@@ -57,7 +108,30 @@ export default function TaskList() {
         />
       </div>
 
-      {/* Task Table */}
+      <div className="flex flex-wrap gap-4 mb-4">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-2 py-1 rounded bg-gray-800 text-white border border-gray-600"
+        >
+          <option value="">All Status</option>
+          <option value="Pending">Pending</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Completed">Completed</option>
+        </select>
+
+        <select
+          value={priorityFilter}
+          onChange={(e) => setPriorityFilter(e.target.value)}
+          className="px-2 py-1 rounded bg-gray-800 text-white border border-gray-600"
+        >
+          <option value="">All Priority</option>
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+        </select>
+      </div>
+
       <table className="w-full text-left border-collapse text-sm mb-4">
         <thead>
           <tr className="border-b border-gray-700">
@@ -70,50 +144,27 @@ export default function TaskList() {
         </thead>
         <tbody>
           {loading ? (
-            <tr>
-              <td colSpan={5} className="text-center text-white py-4">
-                Loading...
-              </td>
-            </tr>
+            <tr><td colSpan={5} className="text-center text-white py-4">Loading...</td></tr>
           ) : error ? (
-            <tr>
-              <td colSpan={5} className="text-center text-red-500 py-4">
-                {error}
-              </td>
-            </tr>
-          ) : tasks.length === 0 ? (
-            <tr>
-              <td colSpan={5} className="text-center text-white py-4">
-                No tasks found.
-              </td>
-            </tr>
+            <tr><td colSpan={5} className="text-center text-red-500 py-4">{error}</td></tr>
+          ) : taskList.length === 0 ? (
+            <tr><td colSpan={5} className="text-center text-white py-4">No tasks found.</td></tr>
           ) : (
-            tasks.map((task) => (
+            taskList.map((task) => (
               <tr key={task._id} className="border-b border-gray-800 hover:bg-gray-700">
                 <td className="p-2 text-white">{task.title}</td>
+                <td className="p-2 text-white">{new Date(task.dueDate).toLocaleDateString('en-GB')}</td>
                 <td className="p-2 text-white">
-                  {new Date(task.dueDate).toLocaleDateString('en-GB')}
+                  <span className="bg-yellow-600 text-xs rounded-full px-2 py-1">{task.status}</span>
                 </td>
                 <td className="p-2 text-white">
-                  <span className="bg-yellow-600 text-xs rounded-full px-2 py-1">
-                    {task.status}
-                  </span>
-                </td>
-                <td className="p-2 text-white">
-                  <span className="bg-purple-600 text-xs rounded-full px-2 py-1">
-                    {task.priority}
-                  </span>
+                  <span className="bg-purple-600 text-xs rounded-full px-2 py-1">{task.priority}</span>
                 </td>
                 <td className="p-2 space-x-2">
-                  <Link href={`/edit?id=${task._id}`} className="text-blue-400">
-                    Edit
-                  </Link>
-                  <button
-                    onClick={(e) => handleDelete(e, task._id)}
-                    className="text-red-500"
-                  >
-                    Delete
-                  </button>
+                  <Link href={`/edit?id=${task._id}`} className="text-blue-400">Edit</Link>
+                  {role !== 'user' && (
+                    <button onClick={(e) => handleDelete(e, task._id)} className="text-red-500">Delete</button>
+                  )}
                 </td>
               </tr>
             ))
@@ -121,7 +172,6 @@ export default function TaskList() {
         </tbody>
       </table>
 
-      {/* Pagination */}
       <div className="flex flex-col md:flex-row justify-center items-center text-white gap-4 mt-6">
         <div className="flex justify-center mt-6">
           <nav className="flex items-center gap-1">
@@ -153,9 +203,7 @@ export default function TaskList() {
                   <button
                     key={item}
                     onClick={() => setPage(item)}
-                    className={`px-3 py-1 rounded border ${page === item
-                      ? 'border-purple-600 text-purple-600 font-bold'
-                      : 'border-gray-600 text-white'}`}
+                    className={`px-3 py-1 rounded border ${page === item ? 'border-purple-600 text-purple-600 font-bold' : 'border-gray-600 text-white'}`}
                   >
                     {item}
                   </button>

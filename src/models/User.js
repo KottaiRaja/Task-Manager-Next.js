@@ -24,6 +24,18 @@ const userSchema = new mongoose.Schema({
     default: null,
   }],
   assignedToManager: Boolean,
+  status: {
+    type: String,
+    enum: ['active', 'pending'],
+    default: 'pending',
+  },
+  imageUrl: {
+    type: String,
+    default: '',
+  },
+}, {
+  timestamps: true,
 })
 
 export const User = mongoose.models.User || mongoose.model('User', userSchema)
+export default mongoose.models.User || mongoose.model('User', userSchema);

@@ -4,8 +4,8 @@ import axios from 'axios'
 
 // ✅ Define async thunks directly here
 
-export const fetchTasks = createAsyncThunk('tasks/fetchTasks', async ({ page, limit, search }) => {
-  const res = await axios.get(`/api/tasks?page=${page}&limit=${limit}&search=${search}`)
+export const fetchTasks = createAsyncThunk('tasks/fetchTasks', async ({ page, limit, search, status, priority }) => {
+  const res = await axios.get(`/api/tasks?page=${page}&limit=${limit}&search=${search}&status=${status}&priority=${priority}`)
   return res.data // expects { tasks: [...], total: number }
 })
 
@@ -19,11 +19,17 @@ export const deleteTask = createAsyncThunk('tasks/deleteTask', async (id) => {
   return id
 })
 
+export const fetchFullTask = createAsyncThunk('tasks/fetchFullTask', async (id) => {
+  const res = await axios.get(`/api/tasks?type=fullTask`)
+  return res.data // expects a single task object
+})
+
 // Your slice stays the same...
 const taskSlice = createSlice({
   name: 'tasks',
   initialState: {
     tasks: [],
+    allTasks: [],
     total: 0,
     loading: false,
     error: null,
@@ -36,6 +42,7 @@ const taskSlice = createSlice({
       })
       .addCase(fetchTasks.fulfilled, (state, action) => {
         state.loading = false
+        console.log("Fetched tasks:", action.payload.tasks)
         state.tasks = action.payload.tasks || []
         state.total = action.payload.total || 0
       })
@@ -50,6 +57,9 @@ const taskSlice = createSlice({
       .addCase(deleteTask.fulfilled, (state, action) => {
         state.tasks = state.tasks.filter((task) => task._id !== action.payload)
         state.total -= 1
+      })
+      .addCase(fetchFullTask.fulfilled, (state, action) => {
+        state.allTasks = action.payload.tasks || []
       })
   },
 })

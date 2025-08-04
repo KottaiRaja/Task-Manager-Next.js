@@ -18,25 +18,29 @@ export default function Sidebar() {
       <nav className="space-y-2">
         <Link
           href="/alltask"
-          className={`block py-2 px-4 rounded ${path === '/' ? 'bg-purple-700' : 'hover:bg-gray-700'
+          className={`block py-2 px-4 rounded ${path === '/alltask' ? 'bg-purple-700' : 'hover:bg-gray-700'
             }`}
         >
           📝 All Tasks
         </Link>
-        <Link
+      {role !== ("user") &&  <Link
           href="/create"
           className={`block py-2 px-4 rounded ${path === '/create' ? 'bg-purple-700' : 'hover:bg-gray-700'
             }`}
         >
           ➕ Create Task
-        </Link>
-        {role !== ("manager" || "user") && <Link
+        </Link> }
+        {role !== ("manager" && "user") && <Link
           href="/user/list"
           className={`block py-2 px-4 rounded ${path === ('/user/list' || '/user/create') ? 'bg-purple-700' : 'hover:bg-gray-700'
             }`}
         >
           👥 Users
         </Link>}
+        <Link href="/calendar" className={`block py-2 px-4 rounded ${path === '/calendar' ? 'bg-purple-700' : 'hover:bg-gray-700'
+            }`}>
+          📅 Calendar
+        </Link>
       </nav>
     </aside>
   )

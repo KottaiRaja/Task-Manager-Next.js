@@ -28,6 +28,7 @@ export async function POST(req) {
 
     const hashedPassword = await bcrypt.hash(password, 10)
     user.password = hashedPassword
+    user.status = 'active' // Ensure the user is active after password reset
     await user.save()
 
     return NextResponse.json({ success: true, message: 'Password reset successful' })

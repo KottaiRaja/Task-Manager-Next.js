@@ -8,8 +8,8 @@ import {
   createUser,
   updateUser,
   deleteUser,
-  clearCurrentUser, 
-  RoleOfUsers // ✅ correct name
+  clearCurrentUser,
+  RoleOfUsers,
 } from '@/redux/features/userSlice'
 
 export default function UserForm() {
@@ -19,8 +19,8 @@ export default function UserForm() {
   const searchParams = useSearchParams()
   const userId = searchParams.get('id')
 
-  const { users, currentUser } = useSelector((state) => state.users)
-  console.log('Current User:', currentUser, users)
+  const { users, currentUser, roleBasedUsers } = useSelector((state) => state.users)
+
   const isEdit = Boolean(userId)
   const isUserList = pathname === '/user/list'
   const isCreateUser = pathname === '/user/create'
@@ -31,15 +31,19 @@ export default function UserForm() {
     email: '',
     role: 'user',
     assignedUser: [],
+    imageUrl: '', // ✅ Added imageUrl
   })
 
+  const [popup, setPopup] = useState({ show: false, message: '', type: 'success' })
+
   useEffect(() => {
-    dispatch(fetchUsers())
+    (async () => {
+      await dispatch(RoleOfUsers())
+    })()
   }, [dispatch])
 
   useEffect(() => {
-    dispatch(RoleOfUsers())
-
+    dispatch(fetchUsers())
   }, [dispatch])
 
   useEffect(() => {
@@ -54,6 +58,7 @@ export default function UserForm() {
         email: currentUser.email || '',
         role: currentUser.role || 'user',
         assignedUser: currentUser.assignedUser || [],
+        imageUrl: currentUser.imageUrl || '',
       })
     }
   }, [currentUser])
@@ -82,22 +87,86 @@ export default function UserForm() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (isEdit) {
-      await dispatch(updateUser({ id: userId, user: formData }))
+      let res = await dispatch(updateUser({ id: userId, user: formData }))
+      if (res.error) {
+        showPopup('Failed to update user.', 'error')
+        return
+      }
+      handleMoveBack()
+      showPopup('User updated successfully.', 'success')
     } else {
-      await dispatch(createUser(formData))
+      let res = await dispatch(createUser(formData))
+      if (res.error) {
+        showPopup('User already exists', 'error')
+        return
+      }
+      handleMoveBack()
+      showPopup('User created successfully.', 'success')
     }
-    router.push('/user/list')
   }
 
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this user?')) {
       await dispatch(deleteUser(userId))
+      showPopup('User deleted successfully.', 'error')
       router.push('/user/list')
+    }
+  }
+
+  const showPopup = (message, type = 'success') => {
+    setPopup({ show: true, message, type })
+    setTimeout(() => {
+      setPopup({ show: false, message: '', type: 'success' })
+    }, 3000)
+  }
+
+  const handleMoveBack = () => {
+    setFormData({
+      username: '',
+      email: '',
+      role: 'user',
+      assignedUser: [],
+      imageUrl: '',
+    })
+    dispatch(clearCurrentUser())
+    router.push('/user/list')
+  }
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    const imageData = new FormData()
+    imageData.append('file', file)
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: imageData,
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        setFormData((prev) => ({ ...prev, imageUrl: data.url }))
+        showPopup('Image uploaded successfully', 'success')
+      } else {
+        showPopup(data.error || 'Upload failed', 'error')
+      }
+    } catch (err) {
+      console.error('Upload error:', err)
+      showPopup('Upload error', 'error')
     }
   }
 
   return (
     <div className="flex flex-col w-full max-w-3xl">
+      {popup.show && (
+        <div className={`fixed top-1/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 px-6 py-4 rounded-xl shadow-xl text-white text-center min-w-[250px] ${popup.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+          {popup.message}
+        </div>
+      )}
+
+      {/* Tab Buttons */}
       <div className="flex gap-2 mb-6">
         <button
           className={`px-4 py-2 rounded text-white transition ${isUserList ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-800'}`}
@@ -121,7 +190,9 @@ export default function UserForm() {
         )}
       </div>
 
+      {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4 bg-[#1e293b] p-6 rounded-xl shadow-md">
+
         <input
           type="text"
           name="username"
@@ -161,7 +232,7 @@ export default function UserForm() {
               className="w-full px-4 py-2 rounded-md bg-gray-800 text-white border border-gray-600"
             >
               <option value="">Select Users</option>
-              {users.map((user) => (
+              {roleBasedUsers.map((user) => (
                 <option key={user._id} value={user._id} disabled={formData.assignedUser.includes(user._id)}>
                   {user.username} ({user.email})
                 </option>
@@ -170,14 +241,12 @@ export default function UserForm() {
 
             <div className="flex flex-wrap gap-2 mt-2">
               {formData.assignedUser.map((uid) => {
-                const user = users.find((u) => u._id === uid)
+                const user = roleBasedUsers.find((u) => u._id === uid)
                 if (!user) return null
                 return (
                   <span key={uid} className="flex items-center bg-purple-600 text-white px-3 py-1 rounded-full text-sm">
                     {user.username}
-                    <button type="button" onClick={() => handleRemoveUser(uid)} className="ml-2 text-white hover:text-red-300">
-                      ❌
-                    </button>
+                    <button type="button" onClick={() => handleRemoveUser(uid)} className="ml-2 text-white hover:text-red-300">❌</button>
                   </span>
                 )
               })}
@@ -185,8 +254,28 @@ export default function UserForm() {
           </div>
         )}
 
+        <div>
+          {/* <label className="text-white mb-1 block text-sm">Upload Profile Image</label> */}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            className="w-full px-4 py-2 rounded-md bg-gray-800 text-white border border-gray-600"
+          />
+          {formData.imageUrl && (
+            <div className="mt-3 flex justify-center">
+              <img
+                src={formData.imageUrl}
+                alt="Profile"
+                className="w-28 h-28 object-cover rounded-full border border-gray-500"
+              />
+            </div>
+          ) }
+        </div>
+
+        {/* Buttons */}
         <div className="flex justify-between pt-4">
-          <button type="button" onClick={() => router.push('/user/list')} className="text-sm text-gray-300 hover:underline">
+          <button type="button" onClick={handleMoveBack} className="text-sm text-gray-300 hover:underline">
             Cancel
           </button>
 

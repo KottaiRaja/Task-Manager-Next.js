@@ -16,34 +16,62 @@ export async function GET(request) {
   const page = parseInt(searchParams.get('page')) || 1;
   const limit = parseInt(searchParams.get('limit')) || 15;
   const search = searchParams.get('search') || '';
+  const status = searchParams.get('status') || '';
+  const priority = searchParams.get('priority') || '';
+
+  const type = searchParams.get('type') || '';
 
   const user = await verifyToken(token);
 
   if (!user) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
-
-  const skip = (page - 1) * limit;
-
-  // Build role-based query
+  
   let query = {};
-
-  if (search) {
-    query.title = { $regex: search, $options: 'i' };
-  }
 
   if (user.role === 'manager') {
     query.createdBy = user.id;
   } else if (user.role === 'user') {
-    query.assignedTo = user.userId; // or match by `email` if needed
+    query.assignedTo = user.id; // or match by `email` if needed
   }
 
+  if (type === 'fullTask') {
+    const tasks = await Task.find(query).sort({ createdAt: 1 }); // Sort by oldest first
+
+    // Add "Task 1", "Task 2", ... to each task
+    const numberedTasks = tasks.map((task, index) => ({
+      ...task.toObject(), // Convert Mongoose document to plain object
+      name: `Task ${index + 1}`,
+    }));
+
+    return NextResponse.json({ tasks: numberedTasks });
+  }
+
+  const skip = (page - 1) * limit;
+
+  // Build role-based query
+
+
+  if (search) {
+    query.title = { $regex: search, $options: 'i' };
+  }
+  if (status && status !== 'All') {
+    query.status = status;
+  }
+  if (priority && priority !== 'All') {
+    query.priority = priority;
+  }
+  
+
+
   const total = await Task.countDocuments(query);
+  
+  console.log('Fetching tasks with query:', query, 'Page:', page, 'Limit:', limit);
 
   const tasks = await Task.find(query)
     .skip(skip)
     .limit(limit)
-    .sort({ createdAt: 1 });
+    .sort({ createdAt: -1 });
 
   return NextResponse.json({ tasks, total, page, limit });
 }

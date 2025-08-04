@@ -21,6 +21,7 @@ export default function LoginPage() {
       const result = await dispatch(loginUser(formData)).unwrap()
       localStorage.setItem('username', result.user.username)
       localStorage.setItem('role', JSON.stringify(result.user.role))
+      localStorage.setItem('imageUrl', result.user.imageUrl || '')
       router.push('/alltask')
     } catch (err) {
       alert(err.message || 'Login failed')
