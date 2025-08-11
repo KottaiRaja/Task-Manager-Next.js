@@ -28,3 +28,52 @@ body {
 .react-datepicker-wrapper {
   width: 100%;
 }
+
+.channel-wrap{
+  display: flex;
+  height: 100%;
+}
+
+.channel-list,
+.channel-chat{
+  float: left;
+}
+
+.channel-chat{
+  width: 76%;
+  float: right;
+}
+
+li {
+  cursor: pointer;
+  list-style-type: none;
+  font-family: sans-serif;
+}
+
+.MuiTypography-root.MuiCardHeader-title.MuiTypography-body2.MuiTypography-displayBlock,
+.MuiTypography-root.MuiTypography-body2{
+  text-align: left;
+}
+
+.MuiButtonBase-root.MuiButton-root.MuiButton-contained.MuiButton-containedSizeSmall.MuiButton-sizeSmall{
+  background-color:var(--sendbird-light-primary-300);
+  color: white;
+}
+
+.user-message__options-btn {
+  height: 32px;
+  width: 32px;
+  border-radius: 25px;
+  border: 2px solid #6210CC;
+  position: absolute;
+  display: inline-block;
+  right: 10px;
+  top: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  background-color: white;
+}
+
+#icon-button-file{
+  display: none !important;
+}

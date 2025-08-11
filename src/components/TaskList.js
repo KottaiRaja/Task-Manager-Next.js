@@ -3,13 +3,14 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { fetchTasks, deleteTask } from '@/redux/features/taskSlice'
+import { fetchTasks, deleteTask, deleteBulkTasks } from '@/redux/features/taskSlice'
 
 export default function TaskList() {
   const dispatch = useDispatch()
   const { tasks, loading, error } = useSelector((state) => state.tasks)
 
   const [taskList, setTaskList] = useState(tasks)
+  const [selectedTaskIds, setSelectedTaskIds] = useState([])
 
   const [page, setPage] = useState(1)
   const [limit] = useState(15)
@@ -38,7 +39,6 @@ export default function TaskList() {
 
   const fetchTaskData = async (customPage = page) => {
     try {
-
       const res = await dispatch(fetchTasks({
         page: customPage,
         limit,
@@ -49,6 +49,7 @@ export default function TaskList() {
 
       setTotal(res.total)
       setTaskList(res.tasks || [])
+      setSelectedTaskIds([])
 
       if (res.tasks.length === 0 && customPage > 1) {
         setPage(customPage - 1)
@@ -58,7 +59,6 @@ export default function TaskList() {
       showPopup('Failed to load tasks', 'error')
     }
   }
-
 
   useEffect(() => {
     fetchTaskData()
@@ -72,13 +72,34 @@ export default function TaskList() {
       try {
         await dispatch(deleteTask(id)).unwrap()
         showPopup('Task deleted successfully', 'success')
-
-        // Fetch again after delete
         fetchTaskData()
       } catch {
         showPopup('Failed to delete task', 'error')
       }
     }
+  }
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedTaskIds.length} tasks?`)) return
+    try {
+      await dispatch(deleteBulkTasks(selectedTaskIds)).unwrap()
+      showPopup('Tasks deleted successfully', 'success')
+      fetchTaskData()
+    } catch {
+      showPopup('Failed to delete tasks', 'error')
+    }
+  }
+
+  const toggleTaskSelect = (id) => {
+    setSelectedTaskIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    )
+  }
+
+  const toggleSelectAll = () => {
+    const allIds = taskList.map(task => task._id)
+    const allSelected = allIds.every(id => selectedTaskIds.includes(id))
+    setSelectedTaskIds(allSelected ? [] : allIds)
   }
 
   const [role, setRole] = useState(null)
@@ -130,11 +151,27 @@ export default function TaskList() {
           <option value="Medium">Medium</option>
           <option value="High">High</option>
         </select>
+
+        {selectedTaskIds.length > 0 && (
+          <button
+            onClick={handleBulkDelete}
+            className="bg-red-600 text-white px-4 py-1 rounded hover:bg-red-700"
+          >
+            Delete Selected ({selectedTaskIds.length})
+          </button>
+        )}
       </div>
 
       <table className="w-full text-left border-collapse text-sm mb-4">
         <thead>
           <tr className="border-b border-gray-700">
+            <th className="p-2 text-white">
+              <input
+                type="checkbox"
+                checked={taskList.length > 0 && selectedTaskIds.length === taskList.length}
+                onChange={toggleSelectAll}
+              />
+            </th>
             <th className="p-2 text-white">Title</th>
             <th className="p-2 text-white">Due Date</th>
             <th className="p-2 text-white">Status</th>
@@ -144,14 +181,21 @@ export default function TaskList() {
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan={5} className="text-center text-white py-4">Loading...</td></tr>
+            <tr><td colSpan={6} className="text-center text-white py-4">Loading...</td></tr>
           ) : error ? (
-            <tr><td colSpan={5} className="text-center text-red-500 py-4">{error}</td></tr>
+            <tr><td colSpan={6} className="text-center text-red-500 py-4">{error}</td></tr>
           ) : taskList.length === 0 ? (
-            <tr><td colSpan={5} className="text-center text-white py-4">No tasks found.</td></tr>
+            <tr><td colSpan={6} className="text-center text-white py-4">No tasks found.</td></tr>
           ) : (
             taskList.map((task) => (
               <tr key={task._id} className="border-b border-gray-800 hover:bg-gray-700">
+                <td className="p-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedTaskIds.includes(task._id)}
+                    onChange={() => toggleTaskSelect(task._id)}
+                  />
+                </td>
                 <td className="p-2 text-white">{task.title}</td>
                 <td className="p-2 text-white">{new Date(task.dueDate).toLocaleDateString('en-GB')}</td>
                 <td className="p-2 text-white">

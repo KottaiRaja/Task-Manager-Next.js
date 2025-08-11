@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { User } from 'lucide-react';
 import { fetchUsers } from '@/redux/features/userSlice'
@@ -23,7 +23,7 @@ export default function UserList() {
   const isUserList = pathname === '/user/list'
   const isCreateUser = pathname === '/user/create'
 
-  
+  const hasFetched = useRef(false);
 
 
   useEffect(() => {
@@ -33,9 +33,12 @@ export default function UserList() {
     }
   }, [])
 
-  useEffect(() => {
-    dispatch(fetchUsers({ page, limit }))
-  }, [page, limit])
+useEffect(() => {
+  if (!hasFetched.current) {
+    hasFetched.current = true;
+    dispatch(fetchUsers({ page, limit }));
+  }
+}, [page, limit]);
 
   const totalPages = Math.ceil(total / limit)
 

@@ -3,6 +3,7 @@ import { User } from '../../../models/User.js';
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { sendResetEmail } from '@/lib/sendEmail';
+import Activity from '@/models/Activity.js';
 
 export async function POST(req) {
   await connectMongo();
@@ -25,12 +26,32 @@ export async function POST(req) {
 
   try {
     await sendResetEmail(email, resetUrl);
+
+    // Log activity for password reset request
+    await Activity.create({
+      user: user._id,
+      action: 'forget_password',
+      targetType: 'user',
+      targetId: user._id,
+      message: `Password reset requested for user with email: ${email}`,
+    });
+
     return NextResponse.json({
       success: true,
       message: 'Reset link sent to email',
     });
   } catch (error) {
     console.error('Email sending failed:', error);
+
+    // Log activity for email sending failure
+    await Activity.create({
+      user: user._id,
+      action: 'email_send_failed',
+      targetType: 'user',
+      targetId: user._id,
+      message: `Failed to send password reset email to ${email}: ${error.message}`,
+    });
+
     return NextResponse.json({
       success: false,
       message: 'Failed to send email',

@@ -4,6 +4,8 @@ import { User } from '../../../models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
+import Activity from '@/models/Activity';
+import mongoose from 'mongoose';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -67,6 +69,15 @@ export async function POST(req) {
         maxAge: 60 * 60 * 24 * 1, // 7 days
       })
     );
+
+    // Log activity for user login
+    await Activity.create({
+      user: new mongoose.Types.ObjectId(user._id),
+      action: 'login',
+      targetType: 'user',
+      targetId: user._id,
+      message: `User logged in with email: ${email}`,
+    }); 
 
     return response;
   } catch (error) {

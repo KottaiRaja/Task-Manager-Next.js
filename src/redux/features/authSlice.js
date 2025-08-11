@@ -33,11 +33,11 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
-        console.log('Login successful:', action.payload);
-        console.log('Token:', action.payload.user);
         state.loggedUser = action.payload.user;
         state.loading = false;
-        localStorage.setItem('token', action.payload.token);
+        localStorage.setItem('username', action.payload.user.username);
+        localStorage.setItem('role', JSON.stringify(action.payload.user.role));
+        localStorage.setItem('userId', action.payload.user.id);
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.error = action.payload || 'Login failed';

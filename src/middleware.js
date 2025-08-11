@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const protectedRoutes = ['/alltask', '/create'];
+const protectedRoutes = ['/insights', '/alltask', '/create'];
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;

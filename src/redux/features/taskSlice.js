@@ -24,6 +24,14 @@ export const fetchFullTask = createAsyncThunk('tasks/fetchFullTask', async (id) 
   return res.data // expects a single task object
 })
 
+export const deleteBulkTasks = createAsyncThunk('tasks/deleteBulkTasks', async (ids) => {
+  await axios.delete('/api/tasks', {
+    data: ids, // ✅ body content
+    headers: { 'Content-Type': 'application/json' },
+  })
+  return ids // array of deleted task IDs
+})
+
 // Your slice stays the same...
 const taskSlice = createSlice({
   name: 'tasks',

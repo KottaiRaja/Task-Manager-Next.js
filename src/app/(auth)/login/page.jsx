@@ -22,7 +22,7 @@ export default function LoginPage() {
       localStorage.setItem('username', result.user.username)
       localStorage.setItem('role', JSON.stringify(result.user.role))
       localStorage.setItem('imageUrl', result.user.imageUrl || '')
-      router.push('/alltask')
+      router.push('/insights')
     } catch (err) {
       alert(err.message || 'Login failed')
     }

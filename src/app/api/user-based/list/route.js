@@ -52,7 +52,7 @@ export async function GET(req) {
 
             users = users[0]?.userRole || [];
         } else {
-            users = await User.find({ role: { $nin: 'admin' } })
+            users = await User.find({ role: { $ne: 'admin' }})
                 .select('username email role _id')
         }
 

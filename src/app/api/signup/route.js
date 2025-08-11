@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { connectMongo } from '@/lib/mongodb';
 import User from '@/models/User'
+import Activity from '@/models/Activity';
 
 export async function POST(req) {
   try {
@@ -35,6 +36,15 @@ export async function POST(req) {
     const newUser = new User({username, email, password: hashedPassword})
 
     await newUser.save()
+
+    // Log activity for user registration
+    await Activity.create({
+      user: new mongoose.Types.ObjectId(newUser._id),
+      action: 'registered',
+      targetType: 'user',
+      targetId: newUser._id,
+      message: `User registered with email: ${email}`,
+    })
 
     return NextResponse.json(
       { message: 'User registered successfully' },

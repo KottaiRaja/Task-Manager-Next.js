@@ -2,7 +2,7 @@ import { connectMongo } from '@/lib/mongodb';
 import { User } from '@/models/User';
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-
+import Activity from '@/models/Activity';
 // ✅ UPDATE USER by ID
 export async function PUT(req, { params }) {
 
@@ -22,6 +22,16 @@ export async function PUT(req, { params }) {
     if (!updatedUser) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
+
+    
+    // Log activity for user update
+    await Activity.create({
+      user: id,
+      action: 'updated',
+      targetType: 'user',
+      targetId: id,
+      message: `User with ID ${id} updated`,
+    });
 
     return NextResponse.json({ message: 'User updated', user: updatedUser });
   } catch (error) {

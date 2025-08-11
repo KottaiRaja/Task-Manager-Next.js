@@ -3,6 +3,7 @@ import { User } from '@/models/User'
 import { NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
+import Activity from '@/models/Activity'
 
 export async function POST(req) {
   await connectMongo()
@@ -30,6 +31,16 @@ export async function POST(req) {
     user.password = hashedPassword
     user.status = 'active' // Ensure the user is active after password reset
     await user.save()
+
+    // Log activity for password reset
+    await Activity.create({
+      user: new mongoose.Types.ObjectId(user._id),
+      action: 'reset_password',
+      targetType: 'user',
+      targetId: user._id,
+      message: `Password reset for user with email: ${user.email}`,
+    })
+
 
     return NextResponse.json({ success: true, message: 'Password reset successful' })
 

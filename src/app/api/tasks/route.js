@@ -4,6 +4,7 @@ import Task from '@/models/tasks';
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import mongoose from 'mongoose';
+import Activity from '@/models/Activity'
 
 export async function GET(request) {
   await connectMongo();
@@ -73,6 +74,17 @@ export async function GET(request) {
     .limit(limit)
     .sort({ createdAt: -1 });
 
+    if (user) {
+      await Activity.create({
+        user: new mongoose.Types.ObjectId(user.id),
+        action: 'fetched',
+        targetType: 'task',
+        taskTitle: search,
+        targetId: tasks.map(task => task._id).join(', '),
+        message: `Fetched tasks with search: "${search}", status: "${status}", priority: "${priority}"`,
+      });
+    }
+
   return NextResponse.json({ tasks, total, page, limit });
 }
 
@@ -114,6 +126,17 @@ export async function POST(req) {
 
     const newItem = await Task.insertOne(taskData);
 
+    if (newItem && user) {
+      await Activity.create({
+        user: new mongoose.Types.ObjectId(user.id),
+        action: 'created',
+        targetType: 'task',
+        targetId: newItem._id,
+        taskTitle: title,
+        message: `Created task "${title}"`,
+      });
+    }
+
     if (!newItem) {
       return NextResponse.json({ error: 'Failed to create item' }, { status: 500 });
     }
@@ -123,4 +146,48 @@ export async function POST(req) {
     console.error('Error creating task:', err);
     return NextResponse.json({ error: 'Failed to create item' }, { status: 500 });
   }
+}
+
+
+export async function DELETE(req) {
+  try {
+    await connectMongo();
+    const cookieHeader = req.headers.get('cookie') || '';
+    const token = parse(cookieHeader)?.token;
+    const user = await verifyToken(token);
+    if (!user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!['admin', 'manager'].includes(user.role)) {
+      return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
+    }
+
+   let ids = await req.json();
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    } 
+
+    const result = await Task.deleteMany({ _id: { $in: ids } });
+
+    if (result && user) {
+      await Activity.create({
+        user: new mongoose.Types.ObjectId(user.id),
+        action: 'deleted',
+        targetType: 'task',
+        targetId: ids.join(', '),
+        message: `Deleted tasks with IDs: ${ids.join(', ')}`,
+      });
+    }
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: 'No tasks found to delete' }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: 'Tasks deleted successfully' }, { status: 200 });
+  } catch (err) {
+    console.error('Error deleting tasks:', err);
+    return NextResponse.json({ error: 'Failed to delete tasks' }, { status: 500 });
+  } 
 }
