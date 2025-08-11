@@ -10,7 +10,7 @@ import "@sendbird/uikit-react/dist/index.css";
 
 export default function DashboardLayout({ children }) {
   const router = useRouter();
-  const APP_ID = "A448CF95-4220-42EE-8600-EF05BEC75D02";
+  const APP_ID = "";
 
   const [userId, setUserId] = useState(null);
   const [nickname, setNickname] = useState(null);
